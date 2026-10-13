@@ -1,0 +1,6 @@
+{
+  "name": "EMPLEO 10 — Gestión Privada de Empleo y Web Profesional",
+  "description": "Plataforma integral privada para búsqueda activa de empleo durante 10 días en Toledo (Santo Domingo-Caudilla, Torrijos, Alcabón, Novés y remoto), con análisis de compatibilidad, CV en PDF/DOCX, web profesional protegida por QR, Kanban, Gmail OAuth y Orientadora Laboral con Gemini.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

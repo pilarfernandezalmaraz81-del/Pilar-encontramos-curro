@@ -1,0 +1,146 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedOwner() {
+      return isSignedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == 'pilarfernandezalmaraz81@gmail.com';
+    }
+
+    function isValidOwnerWorkspace(data) {
+      return data.keys().hasAll(['ownerId', 'ownerEmail', 'payloadJson', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'ownerEmail', 'payloadJson', 'updatedAt'])
+        && data.ownerId is string
+        && data.ownerId.size() >= 1
+        && data.ownerId.size() <= 128
+        && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.ownerId == request.auth.uid
+        && data.ownerEmail is string
+        && data.ownerEmail.size() >= 3
+        && data.ownerEmail.size() <= 160
+        && data.ownerEmail == 'pilarfernandezalmaraz81@gmail.com'
+        && data.payloadJson is string
+        && data.payloadJson.size() >= 2
+        && data.payloadJson.size() <= 900000
+        && data.updatedAt == request.time;
+    }
+
+    function isValidPublicShareSnapshot(data) {
+      return data.keys().hasAll([
+          'token',
+          'ownerId',
+          'companyName',
+          'isActive',
+          'requiresPin',
+          'pinCode',
+          'expiresAtIso',
+          'allowCvDownload',
+          'publicProfileJson',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'token',
+          'ownerId',
+          'companyName',
+          'isActive',
+          'requiresPin',
+          'pinCode',
+          'expiresAtIso',
+          'allowCvDownload',
+          'publicProfileJson',
+          'updatedAt'
+        ])
+        && data.token is string
+        && data.token.size() >= 1
+        && data.token.size() <= 64
+        && data.token.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.ownerId is string
+        && data.ownerId.size() >= 1
+        && data.ownerId.size() <= 128
+        && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.ownerId == request.auth.uid
+        && data.companyName is string
+        && data.companyName.size() >= 1
+        && data.companyName.size() <= 120
+        && data.isActive is bool
+        && data.requiresPin is bool
+        && data.pinCode is string
+        && data.pinCode.size() <= 64
+        && data.expiresAtIso is string
+        && data.expiresAtIso.size() >= 10
+        && data.expiresAtIso.size() <= 64
+        && data.allowCvDownload is bool
+        && data.publicProfileJson is string
+        && data.publicProfileJson.size() >= 2
+        && data.publicProfileJson.size() <= 250000
+        && data.updatedAt == request.time;
+    }
+
+    match /workspaces/{userId} {
+      allow get: if isVerifiedOwner() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if false;
+      allow create: if isVerifiedOwner() && isValidId(userId) && request.auth.uid == userId && isValidOwnerWorkspace(incoming());
+      allow update: if (
+        isVerifiedOwner()
+        && isValidId(userId)
+        && request.auth.uid == userId
+        && isValidOwnerWorkspace(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().ownerEmail == existing().ownerEmail
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['payloadJson', 'updatedAt'])
+        )
+      );
+      allow delete: if isVerifiedOwner() && isValidId(userId) && request.auth.uid == userId && existing().ownerId == request.auth.uid;
+    }
+
+    match /public_shares/{token} {
+      allow get: if isValidId(token) && (
+        existing().isActive == true || (isVerifiedOwner() && existing().ownerId == request.auth.uid)
+      );
+      allow list: if isVerifiedOwner() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedOwner() && isValidId(token) && incoming().token == token && isValidPublicShareSnapshot(incoming());
+      allow update: if (
+        isVerifiedOwner()
+        && isValidId(token)
+        && isValidPublicShareSnapshot(incoming())
+        && existing().ownerId == request.auth.uid
+        && incoming().ownerId == existing().ownerId
+        && incoming().token == existing().token
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'companyName',
+            'isActive',
+            'requiresPin',
+            'pinCode',
+            'expiresAtIso',
+            'allowCvDownload',
+            'publicProfileJson',
+            'updatedAt'
+          ])
+        )
+      );
+      allow delete: if isVerifiedOwner() && isValidId(token) && existing().ownerId == request.auth.uid;
+    }
+  }
+}

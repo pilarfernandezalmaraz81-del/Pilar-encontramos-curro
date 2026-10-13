@@ -1,0 +1,112 @@
+{
+  "entities": {
+    "OwnerWorkspace": {
+      "title": "OwnerWorkspace",
+      "description": "Private career management workspace strictly owned by the single authorized user.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the owner",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerEmail": {
+          "type": "string",
+          "format": "email",
+          "description": "Verified owner email address",
+          "maxLength": 160
+        },
+        "payloadJson": {
+          "type": "string",
+          "description": "Serialized private workspace state (profile, CV, offers, Kanban, Gmail log, 10-day plan)",
+          "maxLength": 900000
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the last update"
+        }
+      },
+      "required": ["ownerId", "ownerEmail", "payloadJson", "updatedAt"]
+    },
+    "PublicShareSnapshot": {
+      "title": "PublicShareSnapshot",
+      "description": "Sanitized public portfolio and company-specific share token metadata without private PII.",
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "description": "Unique share token identifier",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the owner who created this share link",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "companyName": {
+          "type": "string",
+          "description": "Target company or recruiter label",
+          "maxLength": 120
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the share link and public web are currently enabled"
+        },
+        "requiresPin": {
+          "type": "boolean",
+          "description": "Whether access requires a password/PIN verification"
+        },
+        "pinCode": {
+          "type": "string",
+          "description": "Optional access code (empty string if not required)",
+          "maxLength": 64
+        },
+        "expiresAtIso": {
+          "type": "string",
+          "description": "ISO expiration date string",
+          "maxLength": 64
+        },
+        "allowCvDownload": {
+          "type": "boolean",
+          "description": "Whether the authorized public CV can be downloaded from this link"
+        },
+        "publicProfileJson": {
+          "type": "string",
+          "description": "Sanitized public profile and authorized CV summary (no postal address or private notes)",
+          "maxLength": 250000
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation or update"
+        }
+      },
+      "required": [
+        "token",
+        "ownerId",
+        "companyName",
+        "isActive",
+        "requiresPin",
+        "pinCode",
+        "expiresAtIso",
+        "allowCvDownload",
+        "publicProfileJson",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/workspaces/{userId}": {
+      "schema": { "$ref": "#/entities/OwnerWorkspace" },
+      "description": "Stores the private EMPLEO 10 workspace for the authenticated owner."
+    },
+    "/public_shares/{token}": {
+      "schema": { "$ref": "#/entities/PublicShareSnapshot" },
+      "description": "Stores sanitized company-specific shareable web snapshots accessible by token."
+    }
+  }
+}
